@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Absensi & Registrasi Kartu (Web NFC)</title>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --panel:#101a2f;
+      --panel2:#0f172a;
+      --text:#e5e7eb;
+      --muted:#9ca3af;
+      --line:rgba(255,255,255,.10);
+      --accent:#22c55e;
+      --warn:#f59e0b;
+      --danger:#ef4444;
+      --shadow:0 12px 30px rgba(0,0,0,.35);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background: radial-gradient(1200px 600px at 30% -10%, rgba(34,197,94,.18), transparent 55%),
+                  radial-gradient(900px 500px at 80% 20%, rgba(59,130,246,.14), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+    }
+    .app{
+      width:min(1100px, 100%);
+      display:grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap:18px;
+    }
+    @media (max-width: 920px){
+      .app{grid-template-columns: 1fr}
+    }
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.03), transparent 40%) , var(--panel);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .header{
+      padding:18px 18px 14px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      border-bottom:1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.03), transparent);
+    }
+    .brand{
+      display:flex; align-items:center; gap:12px;
+    }
+    .logo{
+      width:40px; height:40px; border-radius:14px;
+      background: linear-gradient(135deg, rgba(34,197,94,.9), rgba(59,130,246,.75));
+      box-shadow: 0 10px 20px rgba(34,197,94,.18);
+    }
+    .title h1{font-size:16px; margin:0}
+    .title p{margin:2px 0 0; font-size:12px; color:var(--muted)}
+    .chip{
+      font-size:12px;
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.02);
+      color: var(--muted);
+      white-space:nowrap;
+    }
+
+    /* Tabs */
+    .tabs{
+      display:flex;
+      gap:8px;
+      padding:12px;
+      background: var(--panel2);
+      border-bottom:1px solid var(--line);
+    }
+    .tab{
+      flex:1;
+      appearance:none;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.02);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:14px;
+      cursor:pointer;
+      font-weight:600;
+      font-size:13px;
+      transition:.15s ease;
+    }
+    .tab[aria-selected="true"]{
+      border-color: rgba(34,197,94,.55);
+      box-shadow: 0 0 0 3px rgba(34,197,94,.12);
+      background: rgba(34,197,94,.08);
+    }
+    .content{
+      padding:16px;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:12px;
+    }
+    @media (max-width: 560px){
+      .grid{grid-template-columns: 1fr}
+    }
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    label{
+      font-size:12px;
+      color:var(--muted);
+    }
+    input, select, textarea{
+      width:100%;
+      padding:12px 12px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.03);
+      color:var(--text);
+      outline:none;
+      transition:.15s ease;
+    }
+    textarea{min-height:90px; resize:vertical}
+    input:focus, select:focus, textarea:focus{
+      border-color: rgba(59,130,246,.55);
+      box-shadow: 0 0 0 3px rgba(59,130,246,.12);
+    }
+    .row{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+      margin-top:12px;
+    }
+    .btns{display:flex; gap:10px; flex-wrap:wrap}
+    .btn{
+      appearance:none;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.03);
+      color:var(--text);
+      padding:11px 12px;
+      border-radius:14px;
+      cursor:pointer;
+      font-weight:700;
+      font-size:13px;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      transition:.15s ease;
+    }
+    .btn:hover{transform: translateY(-1px)}
+    .btn.primary{
+      border-color: rgba(34,197,94,.55);
+      background: rgba(34,197,94,.10);
+    }
+    .btn.warn{
+      border-color: rgba(245,158,11,.55);
+      background: rgba(245,158,11,.10);
+    }
+    .btn.danger{
+      border-color: rgba(239,68,68,.55);
+      background: rgba(239,68,68,.10);
+    }
+    .hint{
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.4;
+    }
+    .divider{
+      height:1px;
+      background: var(--line);
+      margin:14px 0;
+    }
+
+    /* Side panel */
+    .side .content{padding:14px}
+    .status{
+      display:grid;
+      gap:10px;
+      grid-template-columns: 1fr 1fr;
+    }
+    .stat{
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.02);
+      border-radius:16px;
+      padding:12px;
+    }
+    .stat .k{font-size:12px; color:var(--muted)}
+    .stat .v{font-size:14px; margin-top:4px; font-weight:800}
+    .log{
+      margin-top:12px;
+      border:1px solid var(--line);
+      border-radius:16px;
+      background: rgba(255,255,255,.02);
+      overflow:hidden;
+    }
+    .loghead{
+      padding:10px 12px;
+      display:flex; align-items:center; justify-content:space-between;
+      border-bottom:1px solid var(--line);
+      background: rgba(0,0,0,.12);
+    }
+    .loghead strong{font-size:13px}
+    pre{
+      margin:0;
+      padding:12px;
+      font-size:12px;
+      line-height:1.5;
+      color: #d1d5db;
+      white-space:pre-wrap;
+      word-break:break-word;
+      max-height: 300px;
+      overflow:auto;
+    }
+    .badge{
+      font-size:11px;
+      padding:6px 9px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      color:var(--muted);
+    }
+    .ok{border-color: rgba(34,197,94,.45); color: rgba(34,197,94,.95)}
+    .no{border-color: rgba(239,68,68,.45); color: rgba(239,68,68,.95)}
+  </style>
+</head>
+
+<body>
+  <main class="app">
+    <!-- MAIN -->
+    <section class="card">
+      <div class="header">
+        <div class="brand">
+          <div class="logo" aria-hidden="true"></div>
+          <div class="title">
+            <h1>Absensi & Registrasi Kartu (Web NFC)</h1>
+            <p>Scan kartu → tampilkan data pemilik → simpan absensi / registrasi</p>
+          </div>
+        </div>
+        <div class="chip" id="envInfo">Mode: Demo UI (tanpa backend)</div>
+      </div>
+
+      <div class="tabs" role="tablist" aria-label="Menu">
+        <button class="tab" role="tab" aria-selected="true" aria-controls="panel-absen" id="tab-absen">Absensi</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="panel-reg" id="tab-reg">Registrasi Kartu</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="panel-nfc" id="tab-nfc">Tools NFC</button>
+      </div>
+
+      <!-- ABSENSI -->
+      <section class="content" role="tabpanel" id="panel-absen" aria-labelledby="tab-absen">
+        <div class="grid">
+          <div class="field">
+            <label>UID / Serial Number (hasil scan)</label>
+            <input id="abs_uid" type="text" placeholder="Contoh: 04:A1:B2:C3:D4" readonly />
+          </div>
+          <div class="field">
+            <label>Jenis Absensi</label>
+            <select id="abs_type">
+              <option value="IN">Masuk (Check-in)</option>
+              <option value="OUT">Pulang (Check-out)</option>
+              <option value="BREAK">Istirahat</option>
+              <option value="RETURN">Kembali</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Nama Pemilik Kartu</label>
+            <input id="abs_name" type="text" placeholder="Terisi otomatis bila kartu sudah terdaftar" />
+          </div>
+          <div class="field">
+            <label>No. Identitas / NIK / ID Karyawan</label>
+            <input id="abs_id" type="text" placeholder="Contoh: EMP-00123" />
+          </div>
+
+          <div class="field">
+            <label>Unit / Departemen</label>
+            <input id="abs_dept" type="text" placeholder="Contoh: Operasional" />
+          </div>
+          <div class="field">
+            <label>Lokasi / Gate</label>
+            <input id="abs_loc" type="text" placeholder="Contoh: Lobby Utama" />
+          </div>
+
+          <div class="field" style="grid-column:1/-1">
+            <label>Catatan</label>
+            <textarea id="abs_note" placeholder="Opsional: alasan, keterangan, dll"></textarea>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="hint">
+            Alur cepat: <b>Scan</b> kartu → data pemilik muncul → klik <b>Simpan Absensi</b>.
+          </div>
+          <div class="btns">
+            <button class="btn primary" id="btnScanAbs">📶 Scan Kartu</button>
+            <button class="btn" id="btnFillDemoAbs">✨ Isi Demo</button>
+            <button class="btn warn" id="btnSaveAbs">✅ Simpan Absensi</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- REGISTRASI -->
+      <section class="content" role="tabpanel" id="panel-reg" aria-labelledby="tab-reg" hidden>
+        <div class="grid">
+          <div class="field">
+            <label>UID / Serial Number (hasil scan)</label>
+            <input id="reg_uid" type="text" placeholder="Scan dulu untuk mendapatkan UID" readonly />
+          </div>
+          <div class="field">
+            <label>Status Kartu</label>
+            <select id="reg_status">
+              <option value="ACTIVE">Aktif</option>
+              <option value="INACTIVE">Nonaktif</option>
+              <option value="LOST">Hilang</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Nama Pemilik</label>
+            <input id="reg_name" type="text" placeholder="Nama lengkap" />
+          </div>
+          <div class="field">
+            <label>No. HP / WhatsApp</label>
+            <input id="reg_phone" type="tel" placeholder="08xxxxxxxxxx" />
+          </div>
+
+          <div class="field">
+            <label>Email</label>
+            <input id="reg_email" type="email" placeholder="nama@domain.com" />
+          </div>
+          <div class="field">
+            <label>Perusahaan / Instansi</label>
+            <input id="reg_company" type="text" placeholder="Contoh: PT Contoh Abadi" />
+          </div>
+
+          <div class="field">
+            <label>Jabatan</label>
+            <input id="reg_title" type="text" placeholder="Contoh: Supervisor" />
+          </div>
+          <div class="field">
+            <label>Alamat</label>
+            <input id="reg_addr" type="text" placeholder="Alamat singkat" />
+          </div>
+
+          <div class="field" style="grid-column:1/-1">
+            <label>Data Tambahan (mis. nomor kartu, catatan, dsb)</label>
+            <textarea id="reg_extra" placeholder="Opsional"></textarea>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="hint">
+          Jika kamu mau, data pemilik bisa juga <b>ditulis ke NFC tag</b> (NDEF Text/JSON) agar bisa dibaca kembali saat scan.
+        </div>
+
+        <div class="row">
+          <div class="btns">
+            <button class="btn primary" id="btnScanReg">📶 Scan untuk UID</button>
+            <button class="btn" id="btnFillDemoReg">✨ Isi Demo</button>
+            <button class="btn warn" id="btnSaveReg">💾 Simpan Registrasi</button>
+          </div>
+          <div class="btns">
+            <button class="btn primary" id="btnWrite">✍️ Tulis ke Tag</button>
+            <button class="btn danger" id="btnReadOnly">🔒 Make Read-Only</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- NFC TOOLS -->
+      <section class="content" role="tabpanel" id="panel-nfc" aria-labelledby="tab-nfc" hidden>
+        <div class="grid">
+          <div class="field">
+            <label>Payload untuk ditulis (contoh: "Hello world!" atau JSON)</label>
+            <textarea id="writePayload" placeholder='Contoh JSON:
+{"uid":"...","name":"...","id":"..."}'></textarea>
+          </div>
+          <div class="field">
+            <label>Mode tulis</label>
+            <select id="writeMode">
+              <option value="text">Text biasa</option>
+              <option value="json">JSON (akan distandarkan)</option>
+            </select>
+            <div class="hint">Kamu bisa generate payload otomatis dari form Registrasi.</div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="btns">
+            <button class="btn primary" id="btnScan">📶 Scan (Log saja)</button>
+            <button class="btn primary" id="btnWrite2">✍️ Write Payload</button>
+            <button class="btn danger" id="btnReadOnly2">🔒 Make Read-Only</button>
+          </div>
+          <div class="hint">
+            Pastikan halaman berjalan di <b>HTTPS</b> atau <b>localhost</b>, dan pakai <b>Chrome Android</b>.
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <!-- SIDE -->
+    <aside class="card side">
+      <div class="header">
+        <div class="title">
+          <h1>Status & Log</h1>
+          <p>Output scan/write ditampilkan di sini</p>
+        </div>
+        <span class="badge" id="nfcSupportBadge">cek NFC…</span>
+      </div>
+
+      <div class="content">
+        <div class="status">
+          <div class="stat">
+            <div class="k">Last UID</div>
+            <div class="v" id="statUid">-</div>
+          </div>
+          <div class="stat">
+            <div class="k">Last Action</div>
+            <div class="v" id="statAction">-</div>
+          </div>
+          <div class="stat">
+            <div class="k">Waktu</div>
+            <div class="v" id="statTime">-</div>
+          </div>
+          <div class="stat">
+            <div class="k">Panel</div>
+            <div class="v" id="statPanel">Absensi</div>
+          </div>
+        </div>
+
+        <div class="log">
+          <div class="loghead">
+            <strong>Live Log</strong>
+            <button class="btn" id="btnClearLog" type="button">🧹 Clear</button>
+          </div>
+          <pre id="nfcLog">Siap. Klik Scan untuk mulai.</pre>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    // ===== UI helpers (tanpa backend) =====
+    const $ = (sel) => document.querySelector(sel);
+
+    const tabs = [
+      { btn: "#tab-absen", panel: "#panel-absen", name: "Absensi" },
+      { btn: "#tab-reg", panel: "#panel-reg", name: "Registrasi" },
+      { btn: "#tab-nfc", panel: "#panel-nfc", name: "Tools NFC" },
+    ];
+
+    function setTab(activeBtnSel){
+      tabs.forEach(t => {
+        const btn = $(t.btn);
+        const panel = $(t.panel);
+        const active = (t.btn === activeBtnSel);
+        btn.setAttribute("aria-selected", active ? "true" : "false");
+        panel.hidden = !active;
+        if(active) $("#statPanel").textContent = t.name;
+      });
+    }
+
+    tabs.forEach(t => {
+      $(t.btn).addEventListener("click", () => setTab(t.btn));
+    });
+
+    function nowStr(){
+      const d = new Date();
+      return d.toLocaleString();
+    }
+
+    function log(msg){
+      const el = $("#nfcLog");
+      el.textContent += `\n${msg}`;
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function setStatus({uid="-", action="-"}){
+      $("#statUid").textContent = uid || "-";
+      $("#statAction").textContent = action || "-";
+      $("#statTime").textContent = nowStr();
+    }
+
+    $("#btnClearLog").addEventListener("click", () => {
+      $("#nfcLog").textContent = "Log dibersihkan.";
+    });
+
+    // Support badge (tanpa scan)
+    const supported = ("NDEFReader" in window);
+    const badge = $("#nfcSupportBadge");
+    badge.textContent = supported ? "Web NFC: tersedia" : "Web NFC: tidak tersedia";
+    badge.classList.add(supported ? "ok" : "no");
+
+    // ===== Demo buttons =====
+    $("#btnFillDemoAbs").addEventListener("click", () => {
+      $("#abs_uid").value = $("#abs_uid").value || "04:A1:B2:C3:D4";
+      $("#abs_name").value = "Budi Santoso";
+      $("#abs_id").value = "EMP-00123";
+      $("#abs_dept").value = "Operasional";
+      $("#abs_loc").value = "Lobby Utama";
+      $("#abs_note").value = "—";
+      setStatus({uid: $("#abs_uid").value, action: "Isi demo absensi"});
+      log("> Demo absensi diisi");
+    });
+
+    $("#btnFillDemoReg").addEventListener("click", () => {
+      $("#reg_uid").value = $("#reg_uid").value || "04:A1:B2:C3:D4";
+      $("#reg_name").value = "Budi Santoso";
+      $("#reg_phone").value = "081234567890";
+      $("#reg_email").value = "budi@example.com";
+      $("#reg_company").value = "PT Contoh Abadi";
+      $("#reg_title").value = "Supervisor";
+      $("#reg_addr").value = "Jakarta";
+      $("#reg_extra").value = "Kartu tamu / akses area A";
+      setStatus({uid: $("#reg_uid").value, action: "Isi demo registrasi"});
+      log("> Demo registrasi diisi");
+    });
+
+    $("#btnSaveAbs").addEventListener("click", () => {
+      // tempat kamu panggil API backend (POST /attendance)
+      setStatus({uid: $("#abs_uid").value, action: "Simpan absensi (mock)"});
+      log(`> (MOCK) Absensi tersimpan: ${$("#abs_name").value} / ${$("#abs_id").value} / ${$("#abs_type").value}`);
+    });
+
+    $("#btnSaveReg").addEventListener("click", () => {
+      // tempat kamu panggil API backend (POST /cards/register)
+      setStatus({uid: $("#reg_uid").value, action: "Simpan registrasi (mock)"});
+      log(`> (MOCK) Registrasi tersimpan: ${$("#reg_name").value} / ${$("#reg_email").value}`);
+    });
+
+    // ===== NFC button wiring (kamu tinggal ganti isinya pakai snippetmu) =====
+    function buildRegPayload(){
+      const obj = {
+        uid: $("#reg_uid").value || null,
+        name: $("#reg_name").value || null,
+        id: $("#abs_id").value || null,
+        phone: $("#reg_phone").value || null,
+        email: $("#reg_email").value || null,
+        company: $("#reg_company").value || null,
+        title: $("#reg_title").value || null,
+        address: $("#reg_addr").value || null,
+        extra: $("#reg_extra").value || null,
+        ts: new Date().toISOString()
+      };
+      return JSON.stringify(obj, null, 2);
+    }
+
+    // Sinkronkan payload tool NFC dari form registrasi (opsional)
+    $("#tab-reg").addEventListener("click", () => {
+      $("#writePayload").value = buildRegPayload();
+      $("#writeMode").value = "json";
+    });
+
+    // Tombol scan khusus absensi / registrasi -> arahkan ke scan yang sama
+    $("#btnScanAbs").addEventListener("click", () => $("#btnScan").click());
+    $("#btnScanReg").addEventListener("click", () => $("#btnScan").click());
+
+    // Tombol write dari registrasi
+    $("#btnWrite").addEventListener("click", () => {
+      $("#writePayload").value = buildRegPayload();
+      $("#writeMode").value = "json";
+      setTab("#tab-nfc");
+      $("#btnWrite2").click();
+    });
+    $("#btnReadOnly").addEventListener("click", () => {
+      setTab("#tab-nfc");
+      $("#btnReadOnly2").click();
+    });
+
+    // ===== Web NFC SAMPLE HOOKS =====
+    // Kamu bisa langsung tempel snippet Web NFC kamu di bawah ini.
+    $("#btnScan").addEventListener("click", async () => {
+      log("User clicked scan button");
+      setStatus({action:"Scan started"});
+      if(!("NDEFReader" in window)){
+        log("Web NFC is not available. Use Chrome on Android.");
+        return;
+      }
+
+      try{
+        const ndef = new NDEFReader();
+        await ndef.scan();
+        log("> Scan started");
+
+        ndef.addEventListener("readingerror", () => {
+          log("Argh! Cannot read data from the NFC tag. Try another one?");
+          setStatus({action:"Reading error"});
+        });
+
+        ndef.addEventListener("reading", ({ message, serialNumber }) => {
+          log(`> Serial Number: ${serialNumber}`);
+          log(`> Records: (${message.records.length})`);
+          setStatus({uid: serialNumber, action:"Tag read"});
+
+          // Isi UID ke form absensi & registrasi
+          $("#abs_uid").value = serialNumber;
+          $("#reg_uid").value = serialNumber;
+
+          // (Opsional) coba decode record text jika ada
+          // Kamu bisa kembangkan parsing NDEF record di sini.
+        });
+
+      }catch(error){
+        log("Argh! " + error);
+        setStatus({action:"Scan failed"});
+      }
+    });
+
+    $("#btnWrite2").addEventListener("click", async () => {
+      log("User clicked write button");
+      setStatus({action:"Write started"});
+      if(!("NDEFReader" in window)){
+        log("Web NFC is not available. Use Chrome on Android.");
+        return;
+      }
+
+      try{
+        const ndef = new NDEFReader();
+        let payload = $("#writePayload").value || "Hello world!";
+        if($("#writeMode").value === "json"){
+          try{ payload = JSON.stringify(JSON.parse(payload)); }catch(e){}
+        }
+        await ndef.write(payload);
+        log("> Message written");
+        setStatus({action:"Write success"});
+      }catch(error){
+        log("Argh! " + error);
+        setStatus({action:"Write failed"});
+      }
+    });
+
+    $("#btnReadOnly2").addEventListener("click", async () => {
+      log("User clicked make read-only button");
+      setStatus({action:"Make read-only started"});
+      if(!("NDEFReader" in window)){
+        log("Web NFC is not available. Use Chrome on Android.");
+        return;
+      }
+
+      try{
+        const ndef = new NDEFReader();
+        await ndef.makeReadOnly();
+        log("> NFC tag has been made permanently read-only");
+        setStatus({action:"Read-only success"});
+      }catch(error){
+        log("Argh! " + error);
+        setStatus({action:"Read-only failed"});
+      }
+    });
+  </script>
+</body>
+</html>
